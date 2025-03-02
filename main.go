@@ -19,20 +19,17 @@ func main() {
 	if slnPath == "" {
 		// 在build目录下查找sln文件
 		buildDir := "build"
-		err := filepath.Walk(buildDir, func(path string, info os.FileInfo, err error) error {
-			if err != nil {
-				return err
-			}
-			if !info.IsDir() && filepath.Ext(path) == ".sln" {
-				slnPath = path
-				return filepath.SkipAll
-			}
-			return nil
-		})
-
+		files, err := os.ReadDir(buildDir)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "查找sln文件时出错: %v\n", err)
 			os.Exit(1)
+		}
+
+		for _, file := range files {
+			if !file.IsDir() && filepath.Ext(file.Name()) == ".sln" {
+				slnPath = filepath.Join(buildDir, file.Name())
+				break
+			}
 		}
 
 		if slnPath == "" {
