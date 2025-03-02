@@ -11,17 +11,37 @@ import (
 )
 
 func main() {
-	path := flag.String("s", "", "sln file path")
-	configuration := flag.String("c", "Debug|Win32",
-		"Configuration, [configuration|platform], default Debug|Win32")
+	path := flag.String("s", "", "sln file path (可选，若不指定则在build/目录下自动查找)")
+	configuration := flag.String("c", "Debug|x64", "Configuration, [configuration|platform], default Debug|x64")
 	flag.Parse()
 
-	if *path == "" {
-		usage()
-		os.Exit(1)
+	slnPath := *path
+	if slnPath == "" {
+		// 在build目录下查找sln文件
+		buildDir := "build"
+		err := filepath.Walk(buildDir, func(path string, info os.FileInfo, err error) error {
+			if err != nil {
+				return err
+			}
+			if !info.IsDir() && filepath.Ext(path) == ".sln" {
+				slnPath = path
+				return filepath.SkipAll
+			}
+			return nil
+		})
+
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "查找sln文件时出错: %v\n", err)
+			os.Exit(1)
+		}
+
+		if slnPath == "" {
+			fmt.Fprintln(os.Stderr, "在build/目录下未找到.sln文件")
+			os.Exit(1)
+		}
 	}
 
-	solution, err := sln.NewSln(*path)
+	solution, err := sln.NewSln(slnPath)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
@@ -40,14 +60,13 @@ func main() {
 	ioutil.WriteFile("compile_commands.json", js[:], 0644)
 }
 
-
 func usage() {
-	var echo = `Usage: %s -s <path> -c <configuration>
+	var echo = `Usage: %s [-s <path>] -c <configuration>
 
 Where:
-            -s   path                        sln filename
-            -c   configuration               project configuration,eg Debug|Win32.
-                                             default Debug|Win32
+            -s   path                        sln filename (可选，若不指定则在build/目录下自动查找)
+            -c   configuration               project configuration,eg Debug|x64.
+                                             default Debug|x64
 	`
 	echo = fmt.Sprintf(echo, filepath.Base(os.Args[0]))
     fmt.Println(echo)
