@@ -184,17 +184,18 @@ func RemoveBadDefinition(def string) string {
 // 添加一个辅助函数来处理 C++ 标准
 func getCppStandardFlag(langStd string, conformance string) string {
 	// 只处理语言标准，移除 conformance 相关的默认设置
+	// 目前使用 clang-cl.exe ，所以参数格式为 /std:c++20 而非 -std=c++20
 	switch langStd {
 	case "stdcpplatest":
-		return "-std=c++20"
+		return "/std:c++20"
 	case "stdcpp20":
-		return "-std=c++20"
+		return "/std:c++20"
 	case "stdcpp17":
-		return "-std=c++17"
+		return "/std:c++17"
 	case "stdcpp14":
-		return "-std=c++14"
+		return "/std:c++14"
 	case "stdcpp11":
-		return "-std=c++11"
+		return "/std:c++11"
 	}
-	return "-std=c++20"
+	return "/std:c++20"
 }
