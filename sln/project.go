@@ -42,6 +42,8 @@ type ClCompile struct {
 	XMLName                      xml.Name `xml:"ClCompile"`
 	AdditionalIncludeDirectories string   `xml:"AdditionalIncludeDirectories"`
 	PreprocessorDefinitions      string   `xml:"PreprocessorDefinitions"`
+	LanguageStandard            string   `xml:"LanguageStandard"`
+	ConformanceMode             string   `xml:"ConformanceMode"`
 }
 
 type ClCompileSrc struct {
@@ -87,8 +89,8 @@ func NewProject(path string) (Project, error) {
 	return pro, nil
 }
 
-//return include, definition,error
-func (pro *Project) FindConfig(conf string) (string, string, error) {
+//return include, definition, cppStandard, error
+func (pro *Project) FindConfig(conf string) (string, string, string, error) {
 	var cfgList []ProjectConfiguration
 	for _, v := range pro.ItemGroup {
 		if len(v.ProjectConfigurationList) > 0 {
@@ -98,7 +100,7 @@ func (pro *Project) FindConfig(conf string) (string, string, error) {
 	}
 	fmt.Fprintln(os.Stderr, cfgList)
 	if len(cfgList) == 0 {
-		return "", "", errors.New(pro.ProjectPath + ":not found " + conf)
+		return "", "", "", errors.New(pro.ProjectPath + ":not found " + conf)
 	}
 	found := false
 	for _, v := range cfgList {
@@ -108,7 +110,7 @@ func (pro *Project) FindConfig(conf string) (string, string, error) {
 		}
 	}
 	if !found {
-		return "", "", errors.New(pro.ProjectPath + ":not found " + conf)
+		return "", "", "", errors.New(pro.ProjectPath + ":not found " + conf)
 	}
 	for _, v := range pro.ItemDefinitionGroup {
 		if strings.Contains(v.Condition, conf) {
@@ -146,10 +148,13 @@ func (pro *Project) FindConfig(conf string) (string, string, error) {
 				//}
 			}
 
-			return include, def, nil
+			// 处理 C++ 标准
+			cppStdFlag := getCppStandardFlag(cl.LanguageStandard, cl.ConformanceMode)
+
+			return include, def, cppStdFlag, nil
 		}
 	}
-	return "", "", errors.New("not found " + conf)
+	return "", "", "", errors.New("not found " + conf)
 }
 
 func (pro *Project) FindSourceFiles() []string {
@@ -174,4 +179,22 @@ func RemoveBadDefinition(def string) string {
 		def = strings.Replace(def, bad, "", -1)
 	}
 	return def
+}
+
+// 添加一个辅助函数来处理 C++ 标准
+func getCppStandardFlag(langStd string, conformance string) string {
+	// 只处理语言标准，移除 conformance 相关的默认设置
+	switch langStd {
+	case "stdcpplatest":
+		return "-std=c++20"
+	case "stdcpp20":
+		return "-std=c++20"
+	case "stdcpp17":
+		return "-std=c++17"
+	case "stdcpp14":
+		return "-std=c++14"
+	case "stdcpp11":
+		return "-std=c++11"
+	}
+	return "-std=c++20"
 }
